@@ -1,0 +1,68 @@
+name: "publish"
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - '[0-9]+\.[0-9]+\.[0-9]+'
+
+jobs:
+  create-github-release:
+    name: Deploy GitHub Release
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref }}
+          clean: true
+          fetch-depth: 0
+      - name: Get tag & annotation info (${{github.ref}})
+        id: tag-check
+        run: |
+          tag="${GITHUB_REF/refs\/tags\//}"
+          annotation="$(git for-each-ref "$GITHUB_REF" --format='%(contents)' --count=1)"
+          annotation_title="$(echo "$annotation" | head -1)"
+
+          echo "::set-output name=tag::${tag}"
+          echo "::set-output name=annotation_title::${annotation_title}"
+
+          # Prepare annotation body as a file for the next step
+          #
+          # * The GitHub Release render the text in this file as markdown
+          # * The file is needed because :set-output only supports single lines
+          # * The `perl -pe` removes RPM-style date headers from the CHANGELOG,
+          #   because they don't render well as markdown on the Release page
+          #
+          echo "$annotation" |  tail -n +2 | \
+            perl -pe 'BEGIN{undef $/;} s/\n\* (Mon|Tue|Wed|Thu|Fri|Sat|Sun) .*?\n//smg;' > /tmp/annotation.body
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ steps.tag-check.outputs.annotation_title }}
+          body_path: /tmp/annotation.body
+          draft: false
+          prerelease: false
+
+  deploy-forge:
+    name: Deploy to Forge
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref }}
+          clean: true
+      - name: "PDK Build"
+        uses: docker://puppet/pdk:nightly
+        with:
+          args: 'build'    
+      - name: "Push to Forge"
+        uses: docker://puppet/pdk:nightly
+        with:
+          args: 'release publish --forge-token ${{ secrets.FORGE_TOKEN }} --force'
