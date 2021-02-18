@@ -1,7 +1,7 @@
 {
-  "name": "puppetlabs-testing",
+  "name": "dani-testing",
   "version": "4.2.0",
-  "author": "puppetlabs",
+  "author": "carabasdaniel",
   "summary": "A testing module",
   "license": "Apache-2.0",
   "source": "https://github.com/puppetlabs/puppetlabs-testing",
