@@ -1,10 +1,11 @@
-name: "publish"
+name: "Publish module"
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - 'v[0-9]+\.[0-9]+\.[0-9]+'
+    input:
+      forge_token:
+        description: "Token used in pushing the built module to the Puppet Forge"
+        required: true
 
 jobs:
   create-github-release:
@@ -26,14 +27,6 @@ jobs:
 
           echo "::set-output name=tag::${tag}"
           echo "::set-output name=annotation_title::${annotation_title}"
-
-          # Prepare annotation body as a file for the next step
-          #
-          # * The GitHub Release render the text in this file as markdown
-          # * The file is needed because :set-output only supports single lines
-          # * The `perl -pe` removes RPM-style date headers from the CHANGELOG,
-          #   because they don't render well as markdown on the Release page
-          #
           echo "$annotation" |  tail -n +2 | \
             perl -pe 'BEGIN{undef $/;} s/\n\* (Mon|Tue|Wed|Thu|Fri|Sat|Sun) .*?\n//smg;' > /tmp/annotation.body
 
@@ -65,4 +58,4 @@ jobs:
       - name: "Push to Forge"
         uses: docker://puppet/pdk:nightly
         with:
-          args: 'release publish --forge-token ${{ secrets.FORGE_TOKEN }} --force'
+          args: 'release publish --forge-token ${{ github.event.inputs.forge_token }} --force'
