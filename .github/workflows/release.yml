@@ -3,7 +3,7 @@ name: "Publish module"
 on:
   workflow_dispatch:
     inputs:
-      forgetoken:
+      FORGE_TOKEN:
         description: "Forge API token to upload module to the Puppet Forge"
         required: true
 
@@ -44,8 +44,8 @@ jobs:
       - name: "PDK Build"
         uses: docker://puppet/pdk:nightly
         with:
-          args: 'build'    
+          args: 'build'
       - name: "Push to Forge"
         uses: docker://puppet/pdk:nightly
         with:
-          args: 'release publish --forge-token ${{ github.event.inputs.forgetoken }} --force'
+          args: 'release publish --forge-token ${{ github.event.inputs.FORGE_TOKEN }} --force'
