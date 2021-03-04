@@ -3,7 +3,7 @@ name: "Publish module"
 on:
   workflow_dispatch:
     inputs:
-      forge_api_key:
+      forge_token:
         description: "Forge API token to upload module to the Puppet Forge"
         required: false
 
@@ -50,10 +50,11 @@ jobs:
       - name: "set token"
         if: env.FORGE_TOKEN == null
         run: |
-          echo "FORGE_TOKEN=${{ github.event.inputs.forge_api_key }}" >> $GITHUB_ENV
+          echo "FORGE_TOKEN=${{ github.event.inputs.forge_token }}" >> $GITHUB_ENV
       - name: "mask token"
         run: |
-          echo "::add-mask::${{ env.FORGE_TOKEN }}"
+          token = ${{ env.FORGE_TOKEN}}
+          echo "::add-mask::$token"
       - name: "Push to Forge"
         uses: docker://puppet/pdk:nightly
         with:
