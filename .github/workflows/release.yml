@@ -50,7 +50,7 @@ jobs:
       - name: "set token"
         if: env.FORGE_TOKEN == null
         run: |
-          echo "::set-env name=FORGE_TOKEN::${{ github.event.inputs.forge_api_key }}"
+          echo "FORGE_TOKEN=${{ github.event.inputs.forge_api_key }}" >> $GITHUB_ENV
       - name: "mask token"
         run: |
           echo "::add-mask::${{ env.FORGE_TOKEN }}"
