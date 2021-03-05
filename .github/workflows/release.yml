@@ -47,14 +47,11 @@ jobs:
         uses: docker://puppet/pdk:nightly
         with:
           args: 'build'
-      - name: "set token"
-        if: env.FORGE_TOKEN == null
-        run: |
-          echo "FORGE_TOKEN=${{ github.event.inputs.forge_token }}" >> $GITHUB_ENV
       - name: "mask token"
         run: |
-          token = ${{ env.FORGE_TOKEN}}
+          token="${{ github.event.inputs.forge_token }}"
           echo "::add-mask::$token"
+          echo "FORGE_TOKEN=${{ github.event.inputs.forge_token }}" >> $GITHUB_ENV
       - name: "Push to Forge"
         uses: docker://puppet/pdk:nightly
         with:
