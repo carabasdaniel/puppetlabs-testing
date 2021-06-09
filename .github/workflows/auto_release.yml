@@ -28,11 +28,32 @@ jobs:
         echo STEP_START=$(date +%s) >> $GITHUB_ENV
 
     - name: "Checkout Source"
-      if: ${{ github.repository_owner == 'puppetlabs' }}
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
         persist-credentials: false
+
+    - name: "Check if release needed"
+      run: |
+        tag=$(git tag -l | tail -n1)
+        from=$(git log -1 --format=%ai $tag | cut -d ' ' -f 1)
+        echo "Last tagged date $from in ${{ github.repository }}"
+        for i in $(git log --first-parent --merges --since=$from | grep -Eo '#[0-9]+' | tr -d '#')
+        do
+         echo "Checking PR $i"
+         response=$(curl https://api.github.com/repos/${{ github.repository }}/issues/$i/labels)
+         labels=$(echo $response|jq '.[].name' | tr -d '"')
+         for x in $labels
+         do
+          echo "Label $x found in $i"
+          if [[ "$x" == "feature" || "$x" == "bugfix" ]]; then
+            echo "Release needs to be done"
+            exit 0
+          fi  
+         done
+        done
+        echo "Release not needed!"
+        exit 1
 
     - name: "PDK Release prep"
       uses: docker://puppet/iac_release:ci
@@ -42,13 +63,11 @@ jobs:
         CHANGELOG_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: "Get Version"
-      if: ${{ github.repository_owner == 'puppetlabs' }}
       id: gv
       run: |
         echo "::set-output name=ver::$(jq --raw-output .version metadata.json)"
 
     - name: "Commit changes"
-      if: ${{ github.repository_owner == 'puppetlabs' }}
       run: |
         git config --local user.email "${{ github.repository_owner }}@users.noreply.github.com"
         git config --local user.name "GitHub Action"
@@ -58,7 +77,6 @@ jobs:
     - name: Create Pull Request
       id: cpr
       uses: puppetlabs/peter-evans-create-pull-request@v3
-      if: ${{ github.repository_owner == 'puppetlabs' }}
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         commit-message: "Release prep v${{ steps.gv.outputs.ver }}"
@@ -74,7 +92,6 @@ jobs:
         labels: "maintenance"
 
     - name: PR outputs
-      if: ${{ github.repository_owner == 'puppetlabs' }}
       run: |
         echo "Pull Request Number - ${{ steps.cpr.outputs.pull-request-number }}"
         echo "Pull Request URL - ${{ steps.cpr.outputs.pull-request-url }}"
